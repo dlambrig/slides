@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>GlusterFS Block Storage - Feb 27, 2014 Bangalore - Dan Lambright</title>
+
+		<meta name="description" content="GlusterFS Block Storage">
+		<meta name="author" content="Dan Lambright">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/simple.css" id="theme">
+
+		<!-- For syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- If the query includes 'print-pdf', use the PDF print sheet -->
+		<script>
+			document.write( '<link rel="stylesheet" href="css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+			  <section>
+			    <h1>Gluster Block Interface</h1>
+			    <h5>Bangalore, India - February </h5>
+			    </section>
+			    <section>
+			        <h3>Why would gluster need a block interface?</h3>
+				<h4>Use case #1 : virtual machines<h4>
+			        <h4 class="fragment">OpenStack already has libgfapi</h4>
+			        <h4 class="fragment">But theres more out there..</h4>
+			        <h4 class="fragment">XEN</h4>
+				<h4 class="fragment">HyperV</h4>
+				<h4 class="fragment">VmWare</h4>
+				<h4 class="fragment">Virtual Box</h4>
+				<h4 class="fragment">etc. (Apache cloudstack, onapp,...)</h4>
+			    </section>
+                <section>
+                    <h3>Why else would gluster need a block interface?</h3>
+		    <h4 class="fragment">Database<h4>
+		    <h4 class="fragment">Backup<h4>
+		    <h4 class="fragment">Archive<h4>
+		    <h4 class="fragment">Our backup partner (CommVault) is not open source..<h4>
+                </section>
+                <section>
+                    <h3>Is gluster a good fit for block storage?</h3>
+		    <h4 class="fragment">+1 Scale out capacity and performance is desirable.<h4>
+		    <h4 class="fragment">+1 Unified namespace simplifies admin.<h4>
+		    <h4 class="fragment">+1 Gluster is affordable.<h4>
+		    <h4 class="fragment">-1 Gluster aggregates <i>file systems.</i><h4>
+		    <h4 class="fragment">-1 RHS strategy is to focus dev efforts on file systems, not block/object<h4>
+                </section>
+                <section>
+                    <h3>Scale out block storage satisfies a nitch in the marketplace</h3>
+		    <h4 class="fragment">DELL Equallogic.<h4>
+		    <h4 class="fragment">Solidfire.<h4>
+		    <h4 class="fragment">Etc. SCALE computing, SimpliVity, Nutanix..<h4>
+		    <h4 class="fragment">Note Ceph is well integrated with block storage (rbd driver in Linux kernel)<h4>
+                </section>
+                <section>
+                    <h3>So how can we support it?</h3>
+		    <h4 class="fragment">A file or "gluster block device" becomes the LUN </h4>
+		    <h4 class="fragment">The LBA is an offset within the file.</h4>
+		    <h4 class="fragment">The Linux Target Driver (tgtd) runs to interpret iSCSI</h4>
+		    <h4 class="fragment">tgtd's "backing store" is gluster's file</h4>
+		    <h4 class="fragment">A libgfapi plug-in for the Target Driver is under review</h4>
+		    <h4 class="fragment">This technique used by NetAPP and EMC filesystems</h4>
+                </section>
+		<section>
+		<p>
+		  Example : note the backing store is <i>volume@server:image</i>
+		</p>
+                    <pre>
+$ # define the target
+$ tgtadm --lld iscsi --op new --mode target --tid 1 -T iqn.01-07.com.redhat
+$ 
+$ # define a LUN
+$ tgtadm --lld iscsi --op new --mode logicalunit --tid 1 --bstype glfs \
+         --lun 2 --backing-store="gv0@gprfs023-10ge:disk1"
+$
+$ # set LUN online
+$ tgtadm --lld iscsi --op update --mode logicalunit --tid 1 --lun 2 \
+         --params online=1
+$
+$ # set permissions
+$ ./tgtadm --lld iscsi --op bind --mode target --tid 1 -I ALL
+		    </pre>
+		<p>
+		  The LUN can be attached to by any iSCSI intitiator
+		</p>
+		</section>
+                <section>
+                    <h2>Target Daemon (tgtd) and libgfapi</h2>
+                    <img width="600" height="440" src="images/Screen Shot 2014-02-27 at 12.23.57 PM.png" />
+                </section>
+		<section>
+                    <h3>libgfapi implementation</h3>
+		    <h4 class="fragment">Simple to deploy</h4>		  
+		    <h4 class="fragment">Synchronous calls (thread per IO)</h4>		  
+		    <h4 class="fragment">Asynchronous code upcoming</h4>		  
+		    <h4 class="fragment">Some special cases (trim, write many,..)</h4>		  
+		</section>
+		<section>
+		  <h2>Some performance results</h2>
+		  <h5>Two nodes, 64k transfers, 32 queue depth</h5>
+		  <img width="600" height="440" src="images/Screen Shot 2014-02-28 at 3.01.53 PM.png" />
+		</section>
+                <section>
+                    <h3>LIO - replacement for tgtd in RHEL7</h3>
+		    <h4 class="fragment">A kernel module (tgtd is user space)</h4>
+		    <h4 class="fragment">Observed better performance</h4>
+		    <h4 class="fragment">plug-in suport is planned...</h4>
+                </section>
+                <section>
+                    <h2>Configuration Choices</h2>
+                    <img width="600" height="440" src="images/Screen Shot 2014-02-27 at 12.24.59 PM.png" />
+                </section>
+                <section>
+                    <h3>What do SAN admins require?</h3>
+		    <h4 class="fragment">Failover</h4>
+		    <h4 class="fragment">RAID-0, RAID-1, RAID-10</h4>
+		    <h4 class="fragment">Change LUN size</h4>
+		    <h4 class="fragment">Observe SCSI timeout</h4>
+		    <h4 class="fragment">No buffer cache</h4>
+		    <h4 class="fragment">SCSI-3 standards (T10 diff, reservations,...)</h4>
+                </section>
+                <section>
+                    <h3>Configuration iSCSI target on client</h3>
+<img width="600" height="440" src="images/Screen Shot 2014-02-27 at 2.14.50 PM.png" />
+                </section>
+                <section>
+                    <h3>Configuration iSCSI targer on server</h3>
+<img width="600" height="440" src="images/Screen Shot 2014-02-27 at 2.15.05 PM.png" />
+                </section>
+                <section>
+                    <h3>Conclusion</h3>
+		    <h4 class="fragment">Use gluster across network if you can.</h4>
+		    <h4 class="fragment">Use iSCSI across network only if you must.</h4>
+                </section>
+			</div>
+
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.min.js"></script>
+
+		<script>
+
+			// Full list of configuration options available here:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+				transition: Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/fade/none
+
+				// Optional libraries used to extend on reveal.js
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/showdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+					{ src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+					// { src: 'plugin/remotes/remotes.js', async: true, condition: function() { return !!document.body.classList; } }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>
