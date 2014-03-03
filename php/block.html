@@ -40,9 +40,16 @@
 			    <h1>Gluster Block Interface</h1>
 			    <h5>Bangalore, India - February </h5>
 			    </section>
-			    <section>
-			        <h3>Why would gluster need a block interface?</h3>
-				<h4>Use case #1 : virtual machines<h4>
+			  <section>
+			    <h3>Agenda</h3>
+			    <h4>Motivation for block on gluster</h4>
+			    <h4>Implementation / libgfapi</h4>
+			    <h4>Benchmarks</h4>
+			    <h4>Special cases</h4>
+			  </section>
+			  <section>
+			    <h3>Why would gluster need a block interface?</h3>
+			    <h4>Use case #1 : virtual machines<h4>
 			        <h4 class="fragment">OpenStack already has libgfapi</h4>
 			        <h4 class="fragment">But theres more out there..</h4>
 			        <h4 class="fragment">XEN</h4>
@@ -63,6 +70,7 @@
 		    <h4 class="fragment">+1 Scale out capacity and performance is desirable.<h4>
 		    <h4 class="fragment">+1 Unified namespace simplifies admin.<h4>
 		    <h4 class="fragment">+1 Gluster is affordable.<h4>
+		    <h4 class="fragment">+1 Block device translator exists for backend.<h4>
 		    <h4 class="fragment">-1 Gluster aggregates <i>file systems.</i><h4>
 		    <h4 class="fragment">-1 RHS strategy is to focus dev efforts on file systems, not block/object<h4>
                 </section>
@@ -79,12 +87,16 @@
 		    <h4 class="fragment">The LBA is an offset within the file.</h4>
 		    <h4 class="fragment">The Linux Target Driver (tgtd) runs to interpret iSCSI</h4>
 		    <h4 class="fragment">tgtd's "backing store" is gluster's file</h4>
-		    <h4 class="fragment">A libgfapi plug-in for the Target Driver is under review</h4>
+		    <h4 class="fragment">libgfapi plug-in for the Target Driver to skip fuse overhead</h4>
 		    <h4 class="fragment">This technique used by NetAPP and EMC filesystems</h4>
+                </section>
+                <section>
+                    <h2>Target Daemon (tgtd) and libgfapi</h2>
+                    <img width="600" height="440" src="images/Screen Shot 2014-02-27 at 12.23.57 PM.png" />
                 </section>
 		<section>
 		<p>
-		  Example : note the backing store is <i>volume@server:image</i>
+		  Example : note the backing store is <i>volname@server:image</i>
 		</p>
                     <pre>
 $ # define the target
@@ -105,21 +117,49 @@ $ ./tgtadm --lld iscsi --op bind --mode target --tid 1 -I ALL
 		  The LUN can be attached to by any iSCSI intitiator
 		</p>
 		</section>
-                <section>
-                    <h2>Target Daemon (tgtd) and libgfapi</h2>
-                    <img width="600" height="440" src="images/Screen Shot 2014-02-27 at 12.23.57 PM.png" />
-                </section>
 		<section>
                     <h3>libgfapi implementation</h3>
-		    <h4 class="fragment">Simple to deploy</h4>		  
-		    <h4 class="fragment">Synchronous calls (thread per IO)</h4>		  
-		    <h4 class="fragment">Asynchronous code upcoming</h4>		  
-		    <h4 class="fragment">Some special cases (trim, write many,..)</h4>		  
+		<p>
+		  Gluster connection init
+		</p>
+                    <pre>
+ glfs = glfs_new(volname)
+ glfs_set_volfile_server (glfs, "tcp", servername, 24007);
+
+ // bsoflags may be O_SYNC | O_DIRECT | O_RDWR | O_LARGEFILE
+ gfd = glfs_open (fs, pathname, bsoflags);
+
+ ret = glfs_lstat(glfs, pathname, &st);
+                    </pre>
+		<p>
+		  datapath interfaces
+		</p>
+		<pre>
+		  glfs_pread()
+		  glfs_pwrite()
+		  glfs_discard()   for punch hole in file
+		  glfs_fdatasync() for synchronize cache
+		</pre>
+		<p>
+		  termination
+		</p>
+		<pre>
+		  glfs_fini()
+		</pre>
+		</section>
+		<section>
+		  <h3>Thread model</h3>
+		  <h4>synchronous ; thread per/IO.</h4>
+		  <h4>Number of threads is a configuration option</h4>
+		  <h4>Asynchronous using glfs_read_async() and glfs_write_async()</h4>
+		  <h4>Async code written ; in test</h4>
+		  <h4>Number of async IOs bounded by memory</h4>
+		  <h4>For async, no context needed to save while IO in flight</h4>
 		</section>
 		<section>
 		  <h2>Some performance results</h2>
 		  <h5>Two nodes, 64k transfers, 32 queue depth</h5>
-		  <img width="600" height="440" src="images/Screen Shot 2014-02-28 at 3.01.53 PM.png" />
+		  <img width="600" height="440" src="images/cephVgluster.png" />
 		</section>
                 <section>
                     <h3>LIO - replacement for tgtd in RHEL7</h3>
@@ -152,6 +192,22 @@ $ ./tgtadm --lld iscsi --op bind --mode target --tid 1 -I ALL
                     <h3>Conclusion</h3>
 		    <h4 class="fragment">Use gluster across network if you can.</h4>
 		    <h4 class="fragment">Use iSCSI across network only if you must.</h4>
+                </section>
+                <section>
+		<p>
+		  References
+		</p>
+		<pre>
+Blog posts
+
+  https://mojo.redhat.com/people/dlambrig/blog/2013/11/19/ceph-vs-gluster-block-support-sequential-writes
+
+  https://mojo.redhat.com/people/dlambrig/blog/2013/12/11/ceph-vs-gluster-using-plug-ins-to-the-linux-target-driver
+
+  http://www.gluster.org/2013/11/a-gluster-block-interface-performance-and-configuration/
+
+  https://www.gluster.org/category/iscsi/
+		</pre>
                 </section>
 			</div>
 
