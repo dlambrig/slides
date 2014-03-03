@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>GlusterFS Integration with OpenStack - OpenStack Meetup Boston Sept 16 2013 - Luis Pabon</title>
+
+		<meta name="description" content="GlusterFS Integration with OpenStack">
+		<meta name="author" content="Luis Pab&oacute;n">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/simple.css" id="theme">
+
+		<!-- For syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- If the query includes 'print-pdf', use the PDF print sheet -->
+		<script>
+			document.write( '<link rel="stylesheet" href="css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+			    <section>
+			        <h1>GlusterFS Integration with</h1>
+			        <h1>OpenStack</h1>
+			        <h5>OpenStack Meetup - Boston - September 16, 2013</h5>
+			    </section>
+                <section>
+                    <h1>About Me</h1>
+                </section>
+                <section>
+                    <h2>Luis Pab&oacute;n</h2>
+                    <img src="images/luis_pabon.png" />
+                    <p>Principal Software Engineer @ <a href="http://www.redhat.com">Red Hat</a></p>
+                    <p>Project Tech Lead for <a href="http://launchpad.net/gluster-swift">gluster-swift</a></p>
+                </section>
+                <section>
+                    <h1>OpenStack</h1>
+                </section>
+                <section>
+                    <h2>OpenStack Services</h2>
+                    <img src="http://www.openstack.org/themes/openstack/images/openstack-software-diagram.png" />
+                    <p><small><i><a href="http://www.openstack.org">Source</a></i></small></p>
+                </section>
+                <section>
+                    <img src="http://www.openstack.org/themes/openstack/images/new-icons/openstack-object-storage-icon.png" />
+                    <h2>OpenStack Storage</h2>
+                </section>
+                <section>
+                    <h2>Glance</h2>
+                    <ul>
+                        <li>Provides image services</li>
+                        <li>Discovery, registration, and retreiving</li>
+                        <li>Can use local, network, block, or object storage</li>
+                    </ul>
+                </section>
+                <section>
+                    <h2>Ephemeral Storage (Nova)</h2>
+                    <ul>
+                        <li>Allocated to the instance by Nova</li>
+                        <li>Persists until the instance is deleted</li>
+                        <li>Storage for the instance operating system</li>
+                    </ul>
+                </section>
+                <section>
+                    <h2>Cinder</h2>
+                    <ul>
+                        <li>Persistent instance storage</li>
+                        <li>Manages block storage for instances</li>
+                        <li>Snapshots, clones</li>
+                        <li>Third-party plug-in interface</li>
+                    </ul>
+                </section>
+                <section>
+                    <h2>Swift</h2>
+                    <ul>
+                        <li>Provides object storage over REST interface</li>
+                        <li>Horizontal storage scaleout</li>
+                        <li>Used in large scale production today</li>
+                    </ul>
+                </section>
+                <section>
+                    <h1>Object, Block, Ephemeral</h1>
+                    <h1>OH MY!</h1>
+                </section>
+                <section>
+                    <h1>GlusterFS</h1>
+                </section>
+                <section>
+                    <h1>What is it?</h1>
+                </section>
+                <section>
+                    <h3>
+                        GlusterFS is an open source distributed filesystem with a
+                        global namespace developed for scalability and performance
+                    </h3>
+
+                    <img width="600" height="440" src="images/diagram-glusterfs.png" />
+                    <p><small><i><a href="http://www.gluster.org/about">Source</a></i></small></p>
+                </section>
+                <section>
+                    <h2>GlusterFS Access Models</h2>
+                    <ul>
+                        <li>File Access over FUSE</li>
+                        <li>NFS and Samba network file access</li>
+                        <li>Block storage</li>
+                        <li>Object Storage using OpenStack Swift</li>
+                        <li>Application Programming Interface using libgfapi</li>
+                    </ul>
+                </section>
+                <section>
+                    <h1>GlusterFS Architecture</h1>
+                </section>
+                <section>
+                    <img src="images/gluster_architecture.png" />
+                </section>
+                <section>
+                    <h2>GlusterFS Translators</h2>
+                    <ul>
+                        <li>Building blocks for GlusterFS process</li>
+                        <li>Translators can be stacked to gether to achieve desired functionality</li>
+                        <li>Can be loaded on client or server stacks</li>
+                    </ul>
+                </section>
+                <section>
+                    <h2>GlusterFS Brick</h2>
+                    <ul>
+                        <li>A brick is the combination of a node and an export directory</li>
+                        <li>Each brick inherits limits of the underlying filesystem</li>
+                        <li>Ideally, each brick in a cluster should be of the same size</li>
+                    </ul>
+                    <img src="images/gluster_bricks.png" />
+                </section>
+                <section>
+                    <h2>GlusterFS Volume</h2>
+                    <ul>
+                        <li>A volume is a logical collection of bricks</li>
+                        <li>A volume is identified by an administrator provided name</li>
+                        <li>Volumes can be either distributed, striped, and/or replicated</li>
+                    </ul>
+                </section>
+                <section>
+                    <h2>Distributed Volume</h2>
+                    <ul>
+                        <li>Distributed files across various bricks of the volume</li>
+                        <li>Directories are present on all bricks of the volume</li>
+                    </ul>
+                    <img src="images/Distributed_Volume.png" />
+                </section>
+                <section>
+                    <h2>Replicated Volume</h2>
+                    <ul>
+                        <li>Creates synchronous copies of all directory and file updates</li>
+                        <li>Provides high availability of data when nodes failures occur</li>
+                        <li>Transaction driven for ensuring consistency</li>
+                    </ul>
+                    <img src="images/Replicated_Volume.png" />
+                </section>
+                <section>
+                    <h2>Striped Volume</h2>
+                    <ul>
+                        <li>Files are striped into chunks and placed in various bricks</li>
+                        <li>
+                            Recommended only when very large files greater than the size 
+                            of the bricks
+                        </li>
+                        <li>
+                            Redundancy with replication is highly recommended since a 
+                            brick failure can result in data loss
+                        </li>
+                    </ul>
+                    <img src="images/Striped_Volume.png" />
+                </section>
+                <section>
+                    <h2>Distributed Striped Replicated Volume</h2>
+                    <img src="images/Distributed_Striped_Replicated_Volume.png" />
+                </section>
+                <section>
+                    <h2>GlusterFS Volume Example</h2>
+                    <p>
+                        Example: Create a six node distributed and replicated
+                        volume with a two-way mirror
+                    </p>
+                    <pre><code contenteditable>
+$ sudo gluster volume create myvolume \
+    replica 2 \
+    transport tcp \
+    server1:/export/brick/myvolume1 \
+    server2:/export/brick/myvolume2 \
+    server3:/export/brick/myvolume3 \
+    server4:/export/brick/myvolume4 \
+    server5:/export/brick/myvolume5 \
+    server6:/export/brick/myvolume6
+$ sudo gluster volume start myvolume
+$ sudo mount -t glusterfs server1:myvolume /mnt/gluster/myvolume
+                    </code></pre>
+                </section>
+                <section>
+                    <h2>Geo Replication</h2>
+                    <ul>
+                        <li>Master-slave setup</li>
+                        <li>Asynchronous incremental replication</li>
+                        <li>Disaster recovery</li>
+                    </ul>
+                    <img src="images/Geo-Rep03_Internet.png" />
+                </section>
+                <section>
+                    <h1>GlusterFS</h1>
+                    <h1>+</h1>
+                    <h1>OpenStack</h1>
+                </section>
+                <section>
+                    <h2>GlusterFS for Glance</h2>
+                    <h3 class="fragment">Shared storage capacity</h3>
+                    <h3 class="fragment">Geo Replication</h3>
+                    <h3 class="fragment">Storage resizing</h3>
+                    <p class="fragment">
+                        <a href="http://www.gluster.org/community/documentation/index.php/GlusterFS_Glance">
+                            <em>More Info</em>
+                        </a>
+                    </p>
+                </section>
+                <section>
+                    <h2>GlusterFS for Ephemeral Storage (Nova)</h2>
+                    <h3 class="fragment">Shared storage capacity</h3>
+                    <h3 class="fragment">Live Migrations</h3>
+                    <h3 class="fragment">Protection using replicated storage</h3>
+                    <h3 class="fragment">Enhanced performance using libgfapi</h3>
+                </section>
+                <section>
+                    <h2>GlusterFS for Cinder</h2>
+                    <h3 class="fragment">Shared storage capacity</h3>
+                    <h3 class="fragment">Geo Replication</h3>
+                    <h3 class="fragment">Hypervisor assisted snapshots</h3>
+                    <h3 class="fragment">Files served as block storage</h3>
+                    <p class="fragment">
+                        <a href="http://www.gluster.org/community/documentation/index.php/GlusterFS_Cinder">
+                            <em>More Info</em>
+                        </a>
+                    </p>
+                </section>
+                <section>
+                    <h2>GlusterFS for Swift</h2>
+                    <h3 class="fragment">Data access over multiple protocols</h3>
+                    <h3 class="fragment">Shared storage capacity</h3>
+                    <h3 class="fragment">Leverages GlusterFS Geo Replication</h3>
+                    <h3 class="fragment">Object access model</h3>
+                    <h3 class="fragment">Swift Grizzly supported</h3>
+                    <h3 class="fragment">Swift Havana support in progress</h3>
+                    <p class="fragment">
+                        <a href="http://launchpad.net/gluster-swift">
+                            <em>More Info</em>
+                        </a>
+                    </p>
+                </section>
+                <section>
+                    <h2>OpenStack + GlusterFS</h2>
+                    <h2>Swift Use Case</h2>
+                    <img src="images/swift_usecase.png" />
+                </section>
+                <section>
+                    <h1>GlusterFS Benefits:</h1>
+                    <h3>Geo Replication</h3>
+                    <h3>Share capacity</h3>
+                    <h3>Access to data over multiple protocols</h3>
+                    <h3>Storage resizing</h3>
+                </section>
+                <section>
+                    <h2>More Information</h2>
+                    <h3><a href="http://www.openstack.org">OpenStack</a></h3>
+                    <h3><a href="http://www.gluster.org">GlusterFS</a></h3>
+                    <h3><a href="http://launchpad.net/gluster-swift">Gluster for Swift</a></h3>
+                    <h3><a href="http://openstack.redhat.com">Red Hat OpenStack Community Offering</a></h3>
+                </section>
+                <section>
+                    <h1>Thank You</h1>
+                    <p>This presentation is running on <a href="http://www.openshift.com">OpenShift</a></p>
+                    <p>and developed in HTML5 with <a href="http://lab.hakim.se/reveal-js">reveal.js</a></p>
+                </section>
+                <section>
+                    <h2>Luis Pab&oacute;n</h2>
+                    <img src="images/qrcode.png">
+                </section>
+			</div>
+
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.min.js"></script>
+
+		<script>
+
+			// Full list of configuration options available here:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+				transition: Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/fade/none
+
+				// Optional libraries used to extend on reveal.js
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/showdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+					{ src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+					// { src: 'plugin/remotes/remotes.js', async: true, condition: function() { return !!document.body.classList; } }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>
